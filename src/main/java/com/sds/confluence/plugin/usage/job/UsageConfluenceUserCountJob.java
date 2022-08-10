@@ -1,18 +1,21 @@
 package com.sds.confluence.plugin.usage.job;
 
+import com.atlassian.confluence.user.UserAccessor;
+import com.atlassian.crowd.util.UserUtils;
 import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
+import com.atlassian.sal.api.pluginsettings.PluginSettings;
 import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
-import com.atlassian.sal.api.transaction.TransactionTemplate;
-import com.atlassian.sal.api.user.UserManager;
 import com.atlassian.scheduler.JobRunner;
 import com.atlassian.scheduler.JobRunnerRequest;
 import com.atlassian.scheduler.JobRunnerResponse;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.sds.confluence.plugin.usage.config.UsageConfluenceConfig;
 import com.sds.confluence.plugin.usage.domain.SystemInfo;
 import com.sds.confluence.plugin.usage.domain.UserCount;
 import com.sds.confluence.plugin.usage.domain.UserCountRequest;
 
+import javax.inject.Inject;
 import javax.inject.Named;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -28,8 +31,23 @@ import java.util.List;
 
 @Named
 public class UsageConfluenceUserCountJob implements JobRunner {
+  private static final String CLASS_NAME = UsageConfluenceConfig.class.getName();
   private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
+  @ComponentImport
+  private final PluginSettingsFactory pluginSettingsFactory;
+  @ComponentImport
+  private final UserAccessor userAccessor;
+
+
+  @Inject
+  public UsageConfluenceUserCountJob(PluginSettingsFactory pluginSettingsFactory, UserAccessor userAccessor) {
+    this.pluginSettingsFactory = pluginSettingsFactory;
+    this.userAccessor = userAccessor;
+  }
+
+
+  @SuppressWarnings("DuplicatedCode")
   @Override
   public JobRunnerResponse runJob(JobRunnerRequest jobRunnerRequest) {
     System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
@@ -38,26 +56,42 @@ public class UsageConfluenceUserCountJob implements JobRunner {
     System.out.println(jobRunnerRequest.getJobId());
     System.out.println(jobRunnerRequest.getStartTime());
     System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-    String userCountApiUrl = "http://localhost:8080/vas/api/user-count";
-    String userCountApiKey = "user-count-api-key";
-    UserCountRequest userCountRequest = new UserCountRequest();
+
+    PluginSettings settings = pluginSettingsFactory.createGlobalSettings();
+
+    String userCountApiUrl = (String) settings.get(CLASS_NAME + ".userCountApiUrl");
+    String userCountApiKey = (String) settings.get(CLASS_NAME + ".userCountApiKey");
+
     SystemInfo systemInfo = new SystemInfo();
-    systemInfo.setHost("localhost");
-    systemInfo.setIp("127.0.0.1");
-    systemInfo.setPort("2990");
-    systemInfo.setProductCode("JIRA");
+    systemInfo.setHost((String) settings.get(CLASS_NAME + ".host"));
+    systemInfo.setIp((String) settings.get(CLASS_NAME + ".ip"));
+    systemInfo.setPort((String) settings.get(CLASS_NAME + ".port"));
+    systemInfo.setProductCode((String) settings.get(CLASS_NAME + ".productCode"));
+
+
     List<UserCount> userCountList = new ArrayList<>();
     UserCount userCount = new UserCount();
+    int licenseConsumingUsers = userAccessor.countLicenseConsumingUsers();
+    int unsyncedUsers = userAccessor.countLicenseConsumingUsers();
     userCount.setLookupTime(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-    userCount.setTotal("1");
-    userCount.setUsage("1");
+    userCount.setTotal(String.valueOf(licenseConsumingUsers + unsyncedUsers));
+    userCount.setUsage(String.valueOf(licenseConsumingUsers));
     userCountList.add(userCount);
+
+    UserCountRequest userCountRequest = new UserCountRequest();
     userCountRequest.setInfo(systemInfo);
     userCountRequest.setList(userCountList);
+
+    System.out.println("userCountApiUrl: " + userCountApiUrl);
+    System.out.println("userCountApiKey: " + userCountApiKey);
+    System.out.println(gson.toJson(userCountRequest));
+
     postUserCountReport(userCountApiUrl, userCountApiKey, userCountRequest);
+
     return JobRunnerResponse.success("Job finished successfully.");
   }
 
+  @SuppressWarnings("DuplicatedCode")
   private void postUserCountReport(String userCountApiUrl, String userCountApiKey, UserCountRequest userCountRequest) {
     try {
       URL url = new URL(userCountApiUrl);

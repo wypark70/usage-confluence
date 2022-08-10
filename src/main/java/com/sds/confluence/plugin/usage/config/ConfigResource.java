@@ -1,0 +1,87 @@
+package com.sds.confluence.plugin.usage.config;
+
+import com.atlassian.plugin.spring.scanner.annotation.component.Scanned;
+import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
+import com.atlassian.plugin.spring.scanner.annotation.imports.ConfluenceImport;
+import com.atlassian.sal.api.pluginsettings.PluginSettings;
+import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
+import com.atlassian.sal.api.transaction.TransactionTemplate;
+import com.atlassian.sal.api.user.UserManager;
+import com.atlassian.sal.api.user.UserProfile;
+import com.sds.confluence.plugin.usage.util.UsageConfluenceConfigChecker;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.*;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+
+@Path("/")
+@Scanned
+public class ConfigResource {
+  private static final Logger log = LoggerFactory.getLogger(ConfigResource.class);
+  private static final String CLASS_NAME = UsageConfluenceConfig.class.getName();
+  @ComponentImport
+  private final PluginSettingsFactory pluginSettingsFactory;
+  @ComponentImport
+  private final TransactionTemplate transactionTemplate;
+  @ComponentImport
+  private final UserManager userManager;
+
+  @Inject
+  public ConfigResource(PluginSettingsFactory pluginSettingsFactory, TransactionTemplate transactionTemplate, UserManager userManager) {
+    this.pluginSettingsFactory = pluginSettingsFactory;
+    this.transactionTemplate = transactionTemplate;
+    this.userManager = userManager;
+  }
+
+  @SuppressWarnings("DuplicatedCode")
+  @GET
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response get(@Context HttpServletRequest request) {
+    if (isNotSystemAdmin()) return Response.status(HttpServletResponse.SC_FORBIDDEN).build();
+    return Response.ok(transactionTemplate.execute(() -> {
+      PluginSettings settings = pluginSettingsFactory.createGlobalSettings();
+      UsageConfluenceConfig config = new UsageConfluenceConfig();
+      config.setHost((String) settings.get(CLASS_NAME + ".host"));
+      config.setIp((String) settings.get(CLASS_NAME + ".ip"));
+      config.setPort((String) settings.get(CLASS_NAME + ".port"));
+      config.setProductCode((String) settings.get(CLASS_NAME + ".productCode"));
+      config.setUserListApiUrl((String) settings.get(CLASS_NAME + ".userListApiUrl"));
+      config.setUserListApiKey((String) settings.get(CLASS_NAME + ".userListApiKey"));
+      config.setUserCountApiUrl((String) settings.get(CLASS_NAME + ".userCountApiUrl"));
+      config.setUserCountApiKey((String) settings.get(CLASS_NAME + ".userCountApiKey"));
+      return config;
+    })).build();
+  }
+
+  @PUT
+  @Consumes(MediaType.APPLICATION_JSON)
+  public Response put(final UsageConfluenceConfig config, @Context HttpServletRequest request) {
+    if (isNotSystemAdmin()) return Response.status(HttpServletResponse.SC_FORBIDDEN).build();
+    UsageConfluenceConfigChecker.checkUsageConfluenceConfig(config);
+    transactionTemplate.execute(() -> {
+      PluginSettings pluginSettings = pluginSettingsFactory.createGlobalSettings();
+      pluginSettings.put(CLASS_NAME + ".host", config.getHost());
+      pluginSettings.put(CLASS_NAME + ".ip", config.getIp());
+      pluginSettings.put(CLASS_NAME + ".port", config.getPort());
+      pluginSettings.put(CLASS_NAME + ".productCode", config.getProductCode());
+      pluginSettings.put(CLASS_NAME + ".userListApiUrl", config.getUserListApiUrl());
+      pluginSettings.put(CLASS_NAME + ".userListApiKey", config.getUserListApiKey());
+      pluginSettings.put(CLASS_NAME + ".userCountApiUrl", config.getUserCountApiUrl());
+      pluginSettings.put(CLASS_NAME + ".userCountApiKey", config.getUserCountApiKey());
+      return null;
+    });
+    return Response.noContent().build();
+  }
+
+  private boolean isNotSystemAdmin() {
+    UserProfile userProfile = userManager.getRemoteUser();
+    return userProfile == null || !userManager.isAdmin(userProfile.getUserKey());
+  }
+
+}
