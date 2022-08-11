@@ -1,7 +1,6 @@
 package com.sds.confluence.plugin.usage.job;
 
 import com.atlassian.confluence.user.UserAccessor;
-import com.atlassian.crowd.util.UserUtils;
 import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
 import com.atlassian.sal.api.pluginsettings.PluginSettings;
 import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
@@ -14,6 +13,8 @@ import com.sds.confluence.plugin.usage.config.UsageConfluenceConfig;
 import com.sds.confluence.plugin.usage.domain.SystemInfo;
 import com.sds.confluence.plugin.usage.domain.UserCount;
 import com.sds.confluence.plugin.usage.domain.UserCountRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -28,9 +29,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
-
 @Named
 public class UsageConfluenceUserCountJob implements JobRunner {
+  private static final Logger log = LoggerFactory.getLogger(UsageConfluenceUserCountJob.class);
   private static final String CLASS_NAME = UsageConfluenceConfig.class.getName();
   private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
@@ -50,12 +51,12 @@ public class UsageConfluenceUserCountJob implements JobRunner {
   @SuppressWarnings("DuplicatedCode")
   @Override
   public JobRunnerResponse runJob(JobRunnerRequest jobRunnerRequest) {
-    System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-    System.out.println("UsageConfluenceUserCountJob");
-    System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-    System.out.println(jobRunnerRequest.getJobId());
-    System.out.println(jobRunnerRequest.getStartTime());
-    System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+    log.debug(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+    log.debug("UsageConfluenceUserCountJob");
+    log.debug(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+    log.debug(jobRunnerRequest.getJobId().toString());
+    log.debug(jobRunnerRequest.getStartTime().toString());
+    log.debug(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
 
     PluginSettings settings = pluginSettingsFactory.createGlobalSettings();
 
@@ -72,9 +73,8 @@ public class UsageConfluenceUserCountJob implements JobRunner {
     List<UserCount> userCountList = new ArrayList<>();
     UserCount userCount = new UserCount();
     int licenseConsumingUsers = userAccessor.countLicenseConsumingUsers();
-    int unsyncedUsers = userAccessor.countLicenseConsumingUsers();
     userCount.setLookupTime(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-    userCount.setTotal(String.valueOf(licenseConsumingUsers + unsyncedUsers));
+    userCount.setTotal(String.valueOf(licenseConsumingUsers));
     userCount.setUsage(String.valueOf(licenseConsumingUsers));
     userCountList.add(userCount);
 
@@ -82,9 +82,9 @@ public class UsageConfluenceUserCountJob implements JobRunner {
     userCountRequest.setInfo(systemInfo);
     userCountRequest.setList(userCountList);
 
-    System.out.println("userCountApiUrl: " + userCountApiUrl);
-    System.out.println("userCountApiKey: " + userCountApiKey);
-    System.out.println(gson.toJson(userCountRequest));
+    log.debug("userCountApiUrl: " + userCountApiUrl);
+    log.debug("userCountApiKey: " + userCountApiKey);
+    log.debug(gson.toJson(userCountRequest));
 
     postUserCountReport(userCountApiUrl, userCountApiKey, userCountRequest);
 
@@ -116,7 +116,7 @@ public class UsageConfluenceUserCountJob implements JobRunner {
         stringBuilder.append(line);
       }
 
-      System.out.println(stringBuilder);
+      log.debug(stringBuilder.toString());
 
     } catch (Exception e) {
       e.printStackTrace();
