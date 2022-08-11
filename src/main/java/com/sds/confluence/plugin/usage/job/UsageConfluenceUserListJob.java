@@ -14,6 +14,7 @@ import com.sds.confluence.plugin.usage.config.UsageConfluenceConfig;
 import com.sds.confluence.plugin.usage.domain.SystemInfo;
 import com.sds.confluence.plugin.usage.domain.UserInfo;
 import com.sds.confluence.plugin.usage.domain.UserInfoRequest;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -30,6 +31,7 @@ import java.util.List;
 
 
 @Named
+@Slf4j
 public class UsageConfluenceUserListJob implements JobRunner {
   private static final String CLASS_NAME = UsageConfluenceConfig.class.getName();
   private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
@@ -48,12 +50,12 @@ public class UsageConfluenceUserListJob implements JobRunner {
   @SuppressWarnings("DuplicatedCode")
   @Override
   public JobRunnerResponse runJob(JobRunnerRequest jobRunnerRequest) {
-    System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-    System.out.println("UsageConfluenceUserListJob");
-    System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-    System.out.println(jobRunnerRequest.getJobId());
-    System.out.println(jobRunnerRequest.getStartTime());
-    System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+    log.debug(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+    log.debug("UsageConfluenceUserListJob");
+    log.debug(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+    log.debug(jobRunnerRequest.getJobId().toString());
+    log.debug(jobRunnerRequest.getStartTime().toString());
+    log.debug(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
 
     PluginSettings settings = pluginSettingsFactory.createGlobalSettings();
 
@@ -72,8 +74,8 @@ public class UsageConfluenceUserListJob implements JobRunner {
     userList.forEach(user -> {
       UserInfo userInfo = new UserInfo();
       userInfo.setLookupTime(lookupTime);
-      userInfo.setUserId(user.getEmail());
-      userInfo.setUserName(user.getName());
+      userInfo.setUserId(user.getName());
+      userInfo.setUserName(user.getFullName());
       userInfo.setActiveYn("Y");
       userInfoList.add(userInfo);
     });
@@ -82,9 +84,9 @@ public class UsageConfluenceUserListJob implements JobRunner {
     userInfoRequest.setInfo(systemInfo);
     userInfoRequest.setList(userInfoList);
 
-    System.out.println("userListApiUrl: " + userListApiUrl);
-    System.out.println("userListApiKey: " + userListApiKey);
-    System.out.println(gson.toJson(userInfoRequest));
+    log.debug("userListApiUrl: " + userListApiUrl);
+    log.debug("userListApiKey: " + userListApiKey);
+    log.debug(gson.toJson(userInfoRequest));
 
     postUserInfoReport(userListApiUrl, userListApiKey, userInfoRequest);
 
@@ -116,7 +118,7 @@ public class UsageConfluenceUserListJob implements JobRunner {
         stringBuilder.append(line);
       }
 
-      System.out.println(stringBuilder);
+      log.debug(stringBuilder.toString());
 
     } catch (Exception e) {
       e.printStackTrace();
