@@ -19,11 +19,12 @@ import org.slf4j.LoggerFactory;
 import javax.inject.Inject;
 import javax.inject.Named;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
+import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -86,40 +87,38 @@ public class UsageConfluenceUserCountJob implements JobRunner {
     log.debug("userCountApiKey: " + userCountApiKey);
     log.debug(gson.toJson(userCountRequest));
 
-    postUserCountReport(userCountApiUrl, userCountApiKey, userCountRequest);
+    try {
+      postUserCountReport(userCountApiUrl, userCountApiKey, userCountRequest);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
 
     return JobRunnerResponse.success("Job finished successfully.");
   }
 
   @SuppressWarnings("DuplicatedCode")
-  private void postUserCountReport(String userCountApiUrl, String userCountApiKey, UserCountRequest userCountRequest) {
-    try {
-      URL url = new URL(userCountApiUrl);
-      HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
+  private void postUserCountReport(String userCountApiUrl, String userCountApiKey, UserCountRequest userCountRequest) throws IOException {
+    URL url = new URL(userCountApiUrl);
+    HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
 
-      httpURLConnection.setRequestMethod("POST");
-      httpURLConnection.setRequestProperty("Authorization", userCountApiKey);
-      httpURLConnection.setRequestProperty("Content-Type", "application/json");
-      httpURLConnection.setDoInput(true);
-      httpURLConnection.setDoOutput(true);
+    httpURLConnection.setRequestMethod("POST");
+    httpURLConnection.setRequestProperty("Authorization", userCountApiKey);
+    httpURLConnection.setRequestProperty("Content-Type", "application/json");
+    httpURLConnection.setDoInput(true);
+    httpURLConnection.setDoOutput(true);
 
-      BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(httpURLConnection.getOutputStream()));
-      bufferedWriter.write(gson.toJson(userCountRequest));
-      bufferedWriter.flush();
-      bufferedWriter.close();
+    try (OutputStream outputStream = httpURLConnection.getOutputStream()) {
+      byte[] input = gson.toJson(userCountRequest).getBytes(StandardCharsets.UTF_8);
+      outputStream.write(input, 0, input.length);
+    }
 
-      BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(httpURLConnection.getInputStream()));
+    try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(httpURLConnection.getInputStream(), StandardCharsets.UTF_8))) {
       StringBuilder stringBuilder = new StringBuilder();
-      String line = null;
-
-      while ((line = bufferedReader.readLine()) != null) {
-        stringBuilder.append(line);
+      String responseLine = null;
+      while ((responseLine = bufferedReader.readLine()) != null) {
+        stringBuilder.append(responseLine.trim());
       }
-
       log.debug(stringBuilder.toString());
-
-    } catch (Exception e) {
-      e.printStackTrace();
     }
   }
 }
