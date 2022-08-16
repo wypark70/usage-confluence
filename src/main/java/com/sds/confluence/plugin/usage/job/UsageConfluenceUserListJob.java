@@ -73,12 +73,14 @@ public class UsageConfluenceUserListJob implements JobRunner {
     List<UserInfo> userInfoList = new ArrayList<>();
     List<User> userList = userAccessor.getUsersWithConfluenceAccessAsList();
     String lookupTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    String tenantCode = (String) settings.get(CLASS_NAME + ".tenantCode");
     userList.forEach(user -> {
       UserInfo userInfo = new UserInfo();
       userInfo.setLookupTime(lookupTime);
       userInfo.setUserId(user.getEmail());
       userInfo.setUserName(user.getName());
       userInfo.setActiveYn("Y");
+      userInfo.setTenantCode(tenantCode);
       userInfoList.add(userInfo);
     });
 
