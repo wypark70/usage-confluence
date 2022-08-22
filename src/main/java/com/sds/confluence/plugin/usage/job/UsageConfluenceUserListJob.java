@@ -82,6 +82,7 @@ public class UsageConfluenceUserListJob implements JobRunner {
       userInfo.setUserName(user.getName());
       userInfo.setActiveYn("Y");
       userInfo.setTenantCode(tenantCode);
+      userInfo.setModule(module);
       userInfoList.add(userInfo);
     });
 
