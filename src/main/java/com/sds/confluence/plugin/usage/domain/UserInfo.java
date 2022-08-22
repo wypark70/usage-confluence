@@ -7,6 +7,7 @@ public class UserInfo {
   String userName;
   String email;
   String tenantCode;
+  String module;
 
   public String getLookupTime() {
     return lookupTime;
@@ -54,5 +55,13 @@ public class UserInfo {
 
   public void setTenantCode(String tenantCode) {
     this.tenantCode = tenantCode;
+  }
+
+  public String getModule() {
+    return module;
+  }
+
+  public void setModule(String module) {
+    this.module = module;
   }
 }
