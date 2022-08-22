@@ -36,13 +36,13 @@
   </web-item>
 
   <job-config name="Usage Confluence User Count" key="usageConfluenceUserCountJobConfig">
-    <job key="usageConfluenceUserCountJob" perClusterJob="true"/>
+    <job key="usageConfluenceUserCountJob" perClusterJob="false"/>
     <schedule cron-expression="0 0/1 * * * ?" jitterSecs="10"/>
     <managed editable="true" keepingHistory="true" canRunAdhoc="true" canDisable="true"/>
   </job-config>
 
   <job-config name="Usage Confluence User List" key="usageConfluenceUserListJobConfig">
-    <job key="usageConfluenceUserListJob" perClusterJob="true"/>
+    <job key="usageConfluenceUserListJob" perClusterJob="false"/>
     <schedule cron-expression="0 0/5 * * * ?" jitterSecs="10"/>
     <managed editable="true" keepingHistory="true" canRunAdhoc="true" canDisable="true"/>
   </job-config>
